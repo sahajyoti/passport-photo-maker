@@ -1,7 +1,6 @@
 "use client";
 
-import Script from "next/script";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 type AdSlotProps = {
   slot: string;
@@ -31,8 +30,9 @@ export default function AdSlot({
   const adsterraNativeBaseUrl =
     process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||
     "https://pl28943141.profitablecpmratenetwork.com";
-  const adsterraContainerId = `container-${slot}`;
-  const adsterraInvokeSrc = `${adsterraNativeBaseUrl.replace(/\/$/, "")}/${slot}/invoke.js`;
+  const adsterraRootRef = useRef<HTMLDivElement | null>(null);
+  const adsterraInstanceRef = useRef(`inst-${Math.random().toString(36).slice(2, 10)}`);
+  const adsterraContainerId = `container-${slot}-${adsterraInstanceRef.current}`;
 
   const containerClass = useMemo(() => {
     const base =
@@ -52,6 +52,31 @@ export default function AdSlot({
       // Ignore ad runtime errors to avoid breaking app flow.
     }
   }, [googleClient, provider, slot]);
+
+  useEffect(() => {
+    if (provider !== "adsterra" || !slot || !adsterraRootRef.current) {
+      return;
+    }
+
+    const invokeSrc = `${adsterraNativeBaseUrl.replace(/\/$/, "")}/${slot}/invoke.js`;
+    const root = adsterraRootRef.current;
+    root.innerHTML = "";
+
+    const container = document.createElement("div");
+    container.id = adsterraContainerId;
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.setAttribute("data-cfasync", "false");
+    script.src = `${invokeSrc}?v=${adsterraInstanceRef.current}`;
+
+    root.appendChild(script);
+    root.appendChild(container);
+
+    return () => {
+      root.innerHTML = "";
+    };
+  }, [adsterraContainerId, adsterraNativeBaseUrl, provider, slot]);
 
   if (provider === "google" && !googleClient) {
     return (
@@ -79,15 +104,8 @@ export default function AdSlot({
     return (
       <div className={containerClass}>
         <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
-        <Script
-          id={`adsterra-native-${slot}`}
-          strategy="afterInteractive"
-          src={adsterraInvokeSrc}
-          async
-          data-cfasync="false"
-        />
         <div
-          id={adsterraContainerId}
+          ref={adsterraRootRef}
           className="mx-auto"
           style={{ minHeight: `${height}px`, ...style }}
         />
