@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import Script from "next/script";
+import { useEffect, useMemo } from "react";
 
 type AdSlotProps = {
   slot: string;
@@ -14,13 +15,6 @@ type AdSlotProps = {
 declare global {
   interface Window {
     adsbygoogle?: unknown[];
-    atOptions?: {
-      key: string;
-      format: string;
-      height: number;
-      width: number;
-      params: Record<string, string>;
-    };
   }
 }
 
@@ -37,8 +31,8 @@ export default function AdSlot({
   const adsterraNativeBaseUrl =
     process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||
     "https://pl28943141.profitablecpmratenetwork.com";
-  const adsterraContainerRef = useRef<HTMLDivElement | null>(null);
   const adsterraContainerId = `container-${slot}`;
+  const adsterraInvokeSrc = `${adsterraNativeBaseUrl.replace(/\/$/, "")}/${slot}/invoke.js`;
 
   const containerClass = useMemo(() => {
     const base =
@@ -58,38 +52,6 @@ export default function AdSlot({
       // Ignore ad runtime errors to avoid breaking app flow.
     }
   }, [googleClient, provider, slot]);
-
-  useEffect(() => {
-    if (provider !== "adsterra" || !slot || !adsterraContainerRef.current) {
-      return;
-    }
-
-    const srcBase = adsterraNativeBaseUrl.replace(/\/$/, "");
-    const invokeSrc = `${srcBase}/${slot}/invoke.js`;
-
-    window.atOptions = {
-      key: slot,
-      format: "iframe",
-      height,
-      width,
-      params: {},
-    };
-
-    const script = document.createElement("script");
-    script.type = "text/javascript";
-    script.src = invokeSrc;
-    script.async = true;
-    script.setAttribute("data-cfasync", "false");
-
-    const root = adsterraContainerRef.current;
-    root.innerHTML = "";
-    root.appendChild(script);
-
-    return () => {
-      window.atOptions = undefined;
-      root.innerHTML = "";
-    };
-  }, [adsterraNativeBaseUrl, height, provider, slot, width]);
 
   if (provider === "google" && !googleClient) {
     return (
@@ -117,9 +79,15 @@ export default function AdSlot({
     return (
       <div className={containerClass}>
         <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
+        <Script
+          id={`adsterra-native-${slot}`}
+          strategy="afterInteractive"
+          src={adsterraInvokeSrc}
+          async
+          data-cfasync="false"
+        />
         <div
           id={adsterraContainerId}
-          ref={adsterraContainerRef}
           className="mx-auto"
           style={{ minHeight: `${height}px`, ...style }}
         />
