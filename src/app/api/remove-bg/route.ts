@@ -79,7 +79,11 @@ export async function POST(request: Request) {
       throw new Error(lastError?.message || "Python background removal failed.");
     }
 
-    return new NextResponse(outputBuffer, {
+    const outputBytes = new Uint8Array(outputBuffer.byteLength);
+    outputBytes.set(outputBuffer);
+    const outputBlob = new Blob([outputBytes], { type: "image/png" });
+
+    return new NextResponse(outputBlob, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
