@@ -39,33 +39,33 @@ export default function RootLayout({
 
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      {shouldLoadGoogleAdsense ? (
-        <Script
-          id="google-adsense"
-          async
-          strategy="afterInteractive"
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
-          crossOrigin="anonymous"
-        />
-      ) : null}
-      {isAdsterra ? (
-        <>
-          <Script
-            id="adsterra-popunder"
-            strategy="afterInteractive"
-            src="https://pl28943084.profitablecpmratenetwork.com/37/27/41/3727410cc90fd7952a332e882cab21de.js"
-          />
-          <Script
-            id="adsterra-social-bar"
-            strategy="afterInteractive"
-            src="https://pl28943139.profitablecpmratenetwork.com/8f/04/f1/8f04f1d27c03f6d8124ff1c6435104d4.js"
-          />
-        </>
-      ) : null}
       <body
         suppressHydrationWarning
         className={`${sora.variable} ${geistMono.variable} antialiased`}
       >
+        {shouldLoadGoogleAdsense ? (
+          <Script
+            id="google-adsense"
+            async
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+            crossOrigin="anonymous"
+          />
+        ) : null}
+        {isAdsterra ? (
+          <>
+            <Script
+              id="adsterra-popunder"
+              strategy="afterInteractive"
+              src="https://pl28943084.profitablecpmratenetwork.com/37/27/41/3727410cc90fd7952a332e882cab21de.js"
+            />
+            <Script
+              id="adsterra-social-bar"
+              strategy="afterInteractive"
+              src="https://pl28943139.profitablecpmratenetwork.com/8f/04/f1/8f04f1d27c03f6d8124ff1c6435104d4.js"
+            />
+          </>
+        ) : null}
         <OpeningSplash />
         <Navbar />
         {children}

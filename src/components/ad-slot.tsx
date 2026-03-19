@@ -79,12 +79,14 @@ export default function AdSlot({
     script.type = "text/javascript";
     script.src = invokeSrc;
     script.async = true;
+    script.setAttribute("data-cfasync", "false");
 
     const root = adsterraContainerRef.current;
     root.innerHTML = "";
     root.appendChild(script);
 
     return () => {
+      window.atOptions = undefined;
       root.innerHTML = "";
     };
   }, [adsterraNativeBaseUrl, height, provider, slot, width]);
