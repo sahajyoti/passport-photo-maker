@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import AdSlot from "@/components/ad-slot";
 
 const quickLinks = [
   { label: "Home", href: "/" },
@@ -146,6 +147,19 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-10 border-t border-slate-700 pt-5">
+          <AdSlot
+            slot={
+              process.env.NEXT_PUBLIC_AD_SLOT_FOOTER ||
+              process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_FOOTER ||
+              "0000000003"
+            }
+            label="Footer Ad"
+            className="mb-5 border-slate-700 bg-slate-900 text-slate-300"
+            style={{ minHeight: "100px" }}
+            width={728}
+            height={100}
+          />
+
           <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-slate-300">
             <p>© 2026 SnapPassport. All rights reserved.</p>
             <div className="flex flex-wrap items-center gap-4">

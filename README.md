@@ -6,7 +6,7 @@ A modern Next.js + Tailwind web app that turns uploaded images into print-ready 
 
 - Drag-and-drop JPG/PNG upload with live preview
 - Automatic background removal:
-	- Primary: remove.bg API (via secure server route)
+	- Primary: local Python `rembg` API route (AI background removal)
 	- Fallback: in-browser AI segmentation (`@imgly/background-removal`)
 - Background replacement: white, light blue, or custom color
 - Passport photo generation:
@@ -27,6 +27,11 @@ A modern Next.js + Tailwind web app that turns uploaded images into print-ready 
 	- Optional face-aware horizontal centering (when browser supports `FaceDetector`)
 	- Brightness/contrast adjustment
 	- Optional watermark toggle
+- Ad-ready layout:
+	- Top banner ad slot
+	- In-content ad slot
+	- Sidebar ad slot
+	- Footer ad slot
 
 ## Tech Stack
 
@@ -43,7 +48,13 @@ A modern Next.js + Tailwind web app that turns uploaded images into print-ready 
 npm install
 ```
 
-2. (Optional but recommended) Configure remove.bg API key:
+2. Install Python background-removal dependency:
+
+```bash
+pip install rembg[cli] rembg[cpu]
+```
+
+If your environment does not expose `python3`, set a custom Python binary:
 
 ```bash
 cp .env.example .env.local
@@ -52,18 +63,42 @@ cp .env.example .env.local
 Set:
 
 ```bash
-REMOVE_BG_API_KEY=your_remove_bg_api_key
+REMBG_PYTHON_BIN=python3
 ```
 
-If the key is not set, the app automatically uses local AI segmentation fallback.
+If Python/rembg is unavailable, the app automatically uses local AI segmentation fallback.
 
-3. Start dev server:
+3. (Optional) Enable ad slots (Adsterra or Google):
+
+Set in `.env.local`:
+
+```bash
+NEXT_PUBLIC_AD_PROVIDER=adsterra
+NEXT_PUBLIC_ADSTERRA_HOST=www.highperformanceformat.com
+NEXT_PUBLIC_AD_SLOT_TOP=your_top_slot_key
+NEXT_PUBLIC_AD_SLOT_MID=your_mid_slot_key
+NEXT_PUBLIC_AD_SLOT_SIDEBAR=your_sidebar_slot_key
+NEXT_PUBLIC_AD_SLOT_FOOTER=your_footer_slot_key
+```
+
+For Google AdSense instead:
+
+```bash
+NEXT_PUBLIC_AD_PROVIDER=google
+NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT=ca-pub-xxxxxxxxxxxxxxxx
+NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP=xxxxxxxxxx
+NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_MID=xxxxxxxxxx
+NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_SIDEBAR=xxxxxxxxxx
+NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_FOOTER=xxxxxxxxxx
+```
+
+4. Start dev server:
 
 ```bash
 npm run dev
 ```
 
-4. Open `http://localhost:3000`
+5. Open `http://localhost:3000`
 
 ## Build and Lint
 
@@ -75,5 +110,7 @@ npm run build
 ## Important Files
 
 - `src/app/page.tsx`: Main multi-step workflow UI and client-side generation pipeline
-- `src/app/api/remove-bg/route.ts`: Server-side remove.bg proxy endpoint
+- `src/app/api/remove-bg/route.ts`: Server-side `rembg` endpoint (runs Python script)
+- `scripts/remove_bg.py`: Python helper script using Pillow + rembg
+- `src/components/ad-slot.tsx`: Reusable ad slot component with Adsterra and Google support
 - `src/app/globals.css`: Theme and reusable UI utility classes

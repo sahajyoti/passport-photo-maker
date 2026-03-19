@@ -3,6 +3,7 @@
 import { jsPDF } from "jspdf";
 import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import AdSlot from "@/components/ad-slot";
 
 type SizeMode = "passport" | "visa" | "custom";
 type PageMode = "A4" | "4x6";
@@ -76,6 +77,22 @@ const PREVIEW_DPI = 130;
 const PRINT_DPI = 300;
 const GRID_GAP_MM = 4;
 const DEFAULT_TOP_MARGIN_MM = 10;
+const FIXED_COLS = 6;
+
+type PageSizeMm = {
+  widthMm: number;
+  heightMm: number;
+};
+
+type LayoutPlan = {
+  pageWidthMm: number;
+  pageHeightMm: number;
+  photoWidthMm: number;
+  photoHeightMm: number;
+  maxRows: number;
+  maxCopies: number;
+  scale: number;
+};
 
 function mmToPx(mm: number, dpi: number) {
   return Math.round((mm / 25.4) * dpi);
@@ -83,6 +100,60 @@ function mmToPx(mm: number, dpi: number) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getMaxRowsThatFit(pageHeightMm: number, photoHeightMm: number) {
+  return Math.max(1, Math.floor((pageHeightMm + GRID_GAP_MM) / (photoHeightMm + GRID_GAP_MM)));
+}
+
+function buildLayoutPlan(pageSize: PageSizeMm, photoSize: PageSizeMm): LayoutPlan {
+  const orientations: PageSizeMm[] = [
+    { widthMm: pageSize.widthMm, heightMm: pageSize.heightMm },
+    { widthMm: pageSize.heightMm, heightMm: pageSize.widthMm },
+  ];
+
+  let bestPlan: LayoutPlan | null = null;
+
+  for (const orientation of orientations) {
+    const availableWidth = Math.max(1, orientation.widthMm - (FIXED_COLS - 1) * GRID_GAP_MM);
+    const scale = Math.min(1, availableWidth / (FIXED_COLS * photoSize.widthMm));
+    const scaledWidthMm = photoSize.widthMm * scale;
+    const scaledHeightMm = photoSize.heightMm * scale;
+    const maxRows = getMaxRowsThatFit(orientation.heightMm, scaledHeightMm);
+    const maxCopies = maxRows * FIXED_COLS;
+
+    const plan: LayoutPlan = {
+      pageWidthMm: orientation.widthMm,
+      pageHeightMm: orientation.heightMm,
+      photoWidthMm: scaledWidthMm,
+      photoHeightMm: scaledHeightMm,
+      maxRows,
+      maxCopies,
+      scale,
+    };
+
+    if (!bestPlan) {
+      bestPlan = plan;
+      continue;
+    }
+
+    if (
+      plan.maxCopies > bestPlan.maxCopies ||
+      (plan.maxCopies === bestPlan.maxCopies && plan.scale > bestPlan.scale)
+    ) {
+      bestPlan = plan;
+    }
+  }
+
+  return bestPlan || {
+    pageWidthMm: pageSize.widthMm,
+    pageHeightMm: pageSize.heightMm,
+    photoWidthMm: photoSize.widthMm,
+    photoHeightMm: photoSize.heightMm,
+    maxRows: 1,
+    maxCopies: FIXED_COLS,
+    scale: 1,
+  };
 }
 
 async function loadImage(src: string): Promise<HTMLImageElement> {
@@ -226,12 +297,13 @@ async function buildSheetCanvas(options: {
   const gridH = options.rows * options.photoCanvas.height + (options.rows - 1) * gapPx;
 
   const startX = (sheetW - gridW) / 2;
+  const maxStartY = Math.max(0, sheetH - gridH);
   const startY =
     options.layoutAlign === "top"
-      ? mmToPx(clamp(options.topMarginMm, 0, 50), options.dpi)
+      ? clamp(mmToPx(clamp(options.topMarginMm, 0, 50), options.dpi), 0, maxStartY)
       : (sheetH - gridH) / 2;
 
-  if (startX < 0 || startY < 0 || startY + gridH > sheetH) {
+  if (startX < 0 || startY < 0 || gridW > sheetW || gridH > sheetH) {
     throw new Error("Selected grid does not fit on the selected page size.");
   }
 
@@ -277,10 +349,7 @@ export default function Home() {
   const [customHeightMm, setCustomHeightMm] = useState(45);
 
   const [pageMode, setPageMode] = useState<PageMode>("A4");
-  const [rows, setRows] = useState(2);
-  const [cols, setCols] = useState(1);
-  const [copies, setCopies] = useState(2);
-  const [autoRowsFromCopies, setAutoRowsFromCopies] = useState(true);
+  const [copies, setCopies] = useState(FIXED_COLS);
   const [layoutAlign, setLayoutAlign] = useState<LayoutAlign>("top");
   const [topMarginMm, setTopMarginMm] = useState(DEFAULT_TOP_MARGIN_MM);
   const [addBorder, setAddBorder] = useState(false);
@@ -308,6 +377,19 @@ export default function Home() {
   }, [sizeMode, customWidthMm, customHeightMm]);
 
   const selectedPageSize = PAGE_PRESETS[pageMode];
+  const layoutPlan = useMemo(
+    () =>
+      buildLayoutPlan(
+        selectedPageSize,
+        {
+          widthMm: clamp(selectedPhotoSize.widthMm || 35, 10, 70),
+          heightMm: clamp(selectedPhotoSize.heightMm || 45, 10, 90),
+        },
+      ),
+    [selectedPageSize, selectedPhotoSize.heightMm, selectedPhotoSize.widthMm],
+  );
+  const effectiveCopies = clamp(copies, 1, layoutPlan.maxCopies);
+  const effectiveRows = Math.max(1, Math.ceil(effectiveCopies / FIXED_COLS));
 
   const backgroundColor =
     bgMode === "white" ? "#ffffff" : bgMode === "lightBlue" ? "#d6ebff" : customBgColor;
@@ -335,19 +417,8 @@ export default function Home() {
   }, [countryPresetId]);
 
   useEffect(() => {
-    if (!autoRowsFromCopies) {
-      return;
-    }
-
-    const computedRows = clamp(Math.ceil(copies / Math.max(cols, 1)), 1, 12);
-    if (computedRows !== rows) {
-      setRows(computedRows);
-    }
-  }, [autoRowsFromCopies, cols, copies, rows]);
-
-  useEffect(() => {
-    setCopies((prev) => clamp(prev, 1, rows * cols));
-  }, [rows, cols]);
+    setCopies((prev) => clamp(prev, 1, layoutPlan.maxCopies));
+  }, [layoutPlan.maxCopies]);
 
   useEffect(() => {
     if (!uploadedFile) {
@@ -436,8 +507,8 @@ export default function Home() {
       try {
         const singlePhoto = await buildSinglePhotoCanvas({
           foregroundSrc: processedPreview,
-          widthMm: selectedPhotoSize.widthMm,
-          heightMm: selectedPhotoSize.heightMm,
+          widthMm: layoutPlan.photoWidthMm,
+          heightMm: layoutPlan.photoHeightMm,
           dpi: PREVIEW_DPI,
           backgroundColor,
           faceCenterXRatio,
@@ -447,11 +518,11 @@ export default function Home() {
         });
 
         const sheet = await buildSheetCanvas({
-          pageWidthMm: selectedPageSize.widthMm,
-          pageHeightMm: selectedPageSize.heightMm,
-          rows,
-          cols,
-          copies,
+          pageWidthMm: layoutPlan.pageWidthMm,
+          pageHeightMm: layoutPlan.pageHeightMm,
+          rows: effectiveRows,
+          cols: FIXED_COLS,
+          copies: effectiveCopies,
           dpi: PREVIEW_DPI,
           photoCanvas: singlePhoto,
           layoutAlign,
@@ -489,22 +560,21 @@ export default function Home() {
   }, [
     backgroundColor,
     brightness,
-    cols,
     contrast,
-    copies,
+    effectiveCopies,
+    effectiveRows,
     faceCenterXRatio,
     borderColor,
     borderThicknessMm,
     addBorder,
     pageMode,
     layoutAlign,
+    layoutPlan.pageHeightMm,
+    layoutPlan.pageWidthMm,
+    layoutPlan.photoHeightMm,
+    layoutPlan.photoWidthMm,
     processedPreview,
-    rows,
     topMarginMm,
-    selectedPageSize.heightMm,
-    selectedPageSize.widthMm,
-    selectedPhotoSize.heightMm,
-    selectedPhotoSize.widthMm,
     sizeMode,
     watermark,
   ]);
@@ -534,8 +604,8 @@ export default function Home() {
     try {
       const singlePhoto = await buildSinglePhotoCanvas({
         foregroundSrc: processedPreview,
-        widthMm: selectedPhotoSize.widthMm,
-        heightMm: selectedPhotoSize.heightMm,
+        widthMm: layoutPlan.photoWidthMm,
+        heightMm: layoutPlan.photoHeightMm,
         dpi: PRINT_DPI,
         backgroundColor,
         faceCenterXRatio,
@@ -545,11 +615,11 @@ export default function Home() {
       });
 
       const sheet = await buildSheetCanvas({
-        pageWidthMm: selectedPageSize.widthMm,
-        pageHeightMm: selectedPageSize.heightMm,
-        rows,
-        cols,
-        copies,
+        pageWidthMm: layoutPlan.pageWidthMm,
+        pageHeightMm: layoutPlan.pageHeightMm,
+        rows: effectiveRows,
+        cols: FIXED_COLS,
+        copies: effectiveCopies,
         dpi: PRINT_DPI,
         photoCanvas: singlePhoto,
         layoutAlign,
@@ -560,12 +630,12 @@ export default function Home() {
       });
 
       const orientation =
-        selectedPageSize.widthMm > selectedPageSize.heightMm ? "landscape" : "portrait";
+        layoutPlan.pageWidthMm > layoutPlan.pageHeightMm ? "landscape" : "portrait";
 
       const doc = new jsPDF({
         orientation,
         unit: "mm",
-        format: [selectedPageSize.widthMm, selectedPageSize.heightMm],
+        format: [layoutPlan.pageWidthMm, layoutPlan.pageHeightMm],
       });
 
       doc.addImage(
@@ -573,8 +643,8 @@ export default function Home() {
         "JPEG",
         0,
         0,
-        selectedPageSize.widthMm,
-        selectedPageSize.heightMm,
+        layoutPlan.pageWidthMm,
+        layoutPlan.pageHeightMm,
       );
       doc.save("passport-photo-sheet.pdf");
     } catch (error) {
@@ -591,8 +661,8 @@ export default function Home() {
     try {
       const singlePhoto = await buildSinglePhotoCanvas({
         foregroundSrc: processedPreview,
-        widthMm: selectedPhotoSize.widthMm,
-        heightMm: selectedPhotoSize.heightMm,
+        widthMm: layoutPlan.photoWidthMm,
+        heightMm: layoutPlan.photoHeightMm,
         dpi: PRINT_DPI,
         backgroundColor,
         faceCenterXRatio,
@@ -602,11 +672,11 @@ export default function Home() {
       });
 
       const sheet = await buildSheetCanvas({
-        pageWidthMm: selectedPageSize.widthMm,
-        pageHeightMm: selectedPageSize.heightMm,
-        rows,
-        cols,
-        copies,
+        pageWidthMm: layoutPlan.pageWidthMm,
+        pageHeightMm: layoutPlan.pageHeightMm,
+        rows: effectiveRows,
+        cols: FIXED_COLS,
+        copies: effectiveCopies,
         dpi: PRINT_DPI,
         photoCanvas: singlePhoto,
         layoutAlign,
@@ -634,8 +704,8 @@ export default function Home() {
     try {
       const singlePhoto = await buildSinglePhotoCanvas({
         foregroundSrc: processedPreview,
-        widthMm: selectedPhotoSize.widthMm,
-        heightMm: selectedPhotoSize.heightMm,
+        widthMm: layoutPlan.photoWidthMm,
+        heightMm: layoutPlan.photoHeightMm,
         dpi: PRINT_DPI,
         backgroundColor,
         faceCenterXRatio,
@@ -645,11 +715,11 @@ export default function Home() {
       });
 
       const sheet = await buildSheetCanvas({
-        pageWidthMm: selectedPageSize.widthMm,
-        pageHeightMm: selectedPageSize.heightMm,
-        rows,
-        cols,
-        copies,
+        pageWidthMm: layoutPlan.pageWidthMm,
+        pageHeightMm: layoutPlan.pageHeightMm,
+        rows: effectiveRows,
+        cols: FIXED_COLS,
+        copies: effectiveCopies,
         dpi: PRINT_DPI,
         photoCanvas: singlePhoto,
         layoutAlign,
@@ -713,6 +783,19 @@ export default function Home() {
             <span className="workflow-chip">Preview & Print</span>
           </div>
         </header>
+
+        <AdSlot
+          slot={
+            process.env.NEXT_PUBLIC_AD_SLOT_TOP ||
+            process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP ||
+            "0000000000"
+          }
+          label="Top Banner Ad"
+          className="mb-6"
+          style={{ minHeight: "90px" }}
+          width={728}
+          height={90}
+        />
 
         <div className="home-grid grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="space-y-5">
@@ -932,63 +1015,42 @@ export default function Home() {
             </article>
 
             <article className="panel">
-              <h2 className="step-title">4. Select Rows and Columns</h2>
+              <h2 className="step-title">4. Copies and Layout</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="field">
-                  Rows
-                  <input
-                    className="input"
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={rows}
-                    onChange={(event) => {
-                      setRows(clamp(Number(event.target.value) || 1, 1, 12));
-                      setAutoRowsFromCopies(false);
-                    }}
-                  />
+                  Layout
+                  <input className="input" value="6 photos per row (fixed)" readOnly />
                 </label>
-                <label className="field">
-                  Columns
+                <label className="field slider-field">
+                  <span className="slider-head">
+                    <span>Number of photos</span>
+                    <span className="slider-value">{effectiveCopies}</span>
+                  </span>
                   <input
-                    className="input"
-                    type="number"
+                    className="pro-slider"
+                    type="range"
                     min={1}
-                    max={8}
-                    value={cols}
-                    onChange={(event) => {
-                      setCols(clamp(Number(event.target.value) || 1, 1, 8));
-                    }}
-                  />
-                </label>
-                <label className="field">
-                  Number of photos
-                  <input
-                    className="input"
-                    type="number"
-                    min={1}
-                    max={autoRowsFromCopies ? 96 : rows * cols}
-                    value={copies}
+                    max={layoutPlan.maxCopies}
+                    step={1}
+                    value={effectiveCopies}
                     onChange={(event) =>
-                      setCopies(
-                        clamp(
-                          Number(event.target.value) || 1,
-                          1,
-                          autoRowsFromCopies ? 96 : rows * cols,
-                        ),
-                      )
+                      setCopies(clamp(Number(event.target.value) || 1, 1, layoutPlan.maxCopies))
                     }
                   />
-                </label>
-                <label className="field">
-                  Row mode
                   <select
-                    className="input"
-                    value={autoRowsFromCopies ? "auto" : "manual"}
-                    onChange={(event) => setAutoRowsFromCopies(event.target.value === "auto")}
+                    className="input mt-3"
+                    value={effectiveCopies}
+                    onChange={(event) =>
+                      setCopies(clamp(Number(event.target.value) || 1, 1, layoutPlan.maxCopies))
+                    }
                   >
-                    <option value="auto">Auto (from copies)</option>
-                    <option value="manual">Manual</option>
+                    {Array.from({ length: layoutPlan.maxCopies }, (_, index) => index + 1).map(
+                      (count) => (
+                        <option key={count} value={count}>
+                          {count} image{count > 1 ? "s" : ""}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </label>
                 <label className="field">
@@ -1110,12 +1172,27 @@ export default function Home() {
                 High-resolution exports are rendered at 300 DPI for print quality.
               </p>
             </article>
+
+            <AdSlot
+              slot={
+                process.env.NEXT_PUBLIC_AD_SLOT_MID ||
+                process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_MID ||
+                "0000000001"
+              }
+              label="In-Content Ad"
+              style={{ minHeight: "120px" }}
+              width={728}
+              height={120}
+            />
           </section>
 
           <aside className="panel h-fit lg:sticky lg:top-8">
             <h2 className="step-title">Live Print Sheet Preview</h2>
             <p className="mt-2 text-sm text-slate-600">
-              {selectedPhotoSize.widthMm} x {selectedPhotoSize.heightMm} mm • {rows} x {cols} grid • {PAGE_PRESETS[pageMode].label}
+              {layoutPlan.photoWidthMm.toFixed(1)} x {layoutPlan.photoHeightMm.toFixed(1)} mm • {effectiveRows} x {FIXED_COLS} grid • {PAGE_PRESETS[pageMode].label}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Max copies on this page: {layoutPlan.maxCopies}
             </p>
             <p className="mt-1 text-xs text-slate-500">
               Layout: {layoutAlign === "top" ? `Top aligned (${topMarginMm} mm margin)` : "Centered"}
@@ -1151,6 +1228,19 @@ export default function Home() {
                 {errorMessage}
               </p>
             ) : null}
+
+            <AdSlot
+              slot={
+                process.env.NEXT_PUBLIC_AD_SLOT_SIDEBAR ||
+                process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_SIDEBAR ||
+                "0000000002"
+              }
+              label="Sidebar Ad"
+              className="mt-4"
+              style={{ minHeight: "280px" }}
+              width={300}
+              height={280}
+            />
           </aside>
         </div>
       </section>
