@@ -34,6 +34,10 @@ export default function RootLayout({
 }>) {
   const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "adsterra").toLowerCase();
   const isAdsterra = adProvider === "adsterra";
+  const enableAdsterraPopunder =
+    process.env.NEXT_PUBLIC_ADSTERRA_ENABLE_POPUNDER === "true";
+  const enableAdsterraSocialBar =
+    process.env.NEXT_PUBLIC_ADSTERRA_ENABLE_SOCIAL_BAR === "true";
   const adsenseClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
   const shouldLoadGoogleAdsense = adProvider === "google" && Boolean(adsenseClient);
 
@@ -52,13 +56,17 @@ export default function RootLayout({
             crossOrigin="anonymous"
           />
         ) : null}
-        {isAdsterra ? (
+        {isAdsterra && enableAdsterraPopunder ? (
           <>
             <Script
               id="adsterra-popunder"
               strategy="afterInteractive"
               src="https://pl28943084.profitablecpmratenetwork.com/37/27/41/3727410cc90fd7952a332e882cab21de.js"
             />
+          </>
+        ) : null}
+        {isAdsterra && enableAdsterraSocialBar ? (
+          <>
             <Script
               id="adsterra-social-bar"
               strategy="afterInteractive"
