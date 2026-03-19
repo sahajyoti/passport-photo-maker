@@ -192,31 +192,64 @@ async function detectFaceCenterXRatio(image: HTMLImageElement): Promise<number |
   }
 }
 
-async function removeImageBackground(file: File): Promise<Blob> {
-  let browserErrorMessage = "";
+async function detectSubjectCenterXRatioFromAlpha(image: HTMLImageElement): Promise<number | null> {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
 
-  try {
-    return await removeBackgroundInBrowser(file, {
-      model: "isnet_quint8",
-      output: {
-        format: "image/png",
-      },
-    });
-  } catch (browserError) {
-    browserErrorMessage = browserError instanceof Error ? browserError.message : "Browser engine failed.";
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    return null;
   }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0);
+
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let minX = width;
+  let maxX = -1;
+
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 20) {
+        if (x < minX) {
+          minX = x;
+        }
+        if (x > maxX) {
+          maxX = x;
+        }
+      }
+    }
+  }
+
+  if (maxX < minX) {
+    return null;
+  }
+
+  const centerX = (minX + maxX) / 2;
+  return clamp(centerX / width, 0.1, 0.9);
+}
+
+async function removeImageBackground(file: File): Promise<Blob> {
+  let apiErrorMessage = "";
 
   try {
     const formData = new FormData();
     formData.append("image", file);
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch("/api/remove-bg", {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     if (!response.ok) {
-      let apiErrorMessage = "API failed.";
+      apiErrorMessage = "API failed.";
       try {
         const payload = (await response.json()) as { error?: string };
         apiErrorMessage = payload.error || apiErrorMessage;
@@ -232,8 +265,19 @@ async function removeImageBackground(file: File): Promise<Blob> {
 
     return apiBlob;
   } catch (apiError) {
-    const apiErrorMessage = apiError instanceof Error ? apiError.message : "API engine failed.";
-    const combined = `Background removal failed. Browser: ${browserErrorMessage || "unknown"}. API: ${apiErrorMessage}`;
+    apiErrorMessage = apiError instanceof Error ? apiError.message : "API engine failed.";
+  }
+
+  try {
+    return await removeBackgroundInBrowser(file, {
+      model: "isnet_quint8",
+      output: {
+        format: "image/png",
+      },
+    });
+  } catch (browserError) {
+    const browserErrorMessage = browserError instanceof Error ? browserError.message : "Browser engine failed.";
+    const combined = `Background removal failed. API: ${apiErrorMessage || "unknown"}. Browser: ${browserErrorMessage}`;
     throw new Error(combined);
   }
 }
@@ -451,24 +495,11 @@ export default function Home() {
       return;
     }
 
-    let didCancel = false;
     const sourceUrl = URL.createObjectURL(uploadedFile);
     setSourcePreview(sourceUrl);
     setFaceCenterXRatio(null);
 
-    loadImage(sourceUrl)
-      .then((image) => detectFaceCenterXRatio(image))
-      .then((ratio) => {
-        if (!didCancel && typeof ratio === "number") {
-          setFaceCenterXRatio(ratio);
-        }
-      })
-      .catch(() => {
-        // No-op: face detection is optional.
-      });
-
     return () => {
-      didCancel = true;
       URL.revokeObjectURL(sourceUrl);
     };
   }, [uploadedFile]);
@@ -491,6 +522,16 @@ export default function Home() {
         }
 
         const outputUrl = URL.createObjectURL(outputBlob);
+        const processedImage = await loadImage(outputUrl);
+        let centerRatio = await detectFaceCenterXRatio(processedImage);
+        if (centerRatio === null) {
+          centerRatio = await detectSubjectCenterXRatioFromAlpha(processedImage);
+        }
+
+        if (!didCancel) {
+          setFaceCenterXRatio(centerRatio);
+        }
+
         setProcessedPreview((prev) => {
           if (prev) {
             URL.revokeObjectURL(prev);
