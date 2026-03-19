@@ -34,9 +34,11 @@ export default function AdSlot({
 }: AdSlotProps) {
   const provider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
   const googleClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
-  const adsterraBaseUrl = process.env.NEXT_PUBLIC_ADSTERRA_BASE_URL || "";
-  const adsterraHost = process.env.NEXT_PUBLIC_ADSTERRA_HOST || "www.highperformanceformat.com";
+  const adsterraNativeBaseUrl =
+    process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||
+    "https://pl28943141.profitablecpmratenetwork.com";
   const adsterraContainerRef = useRef<HTMLDivElement | null>(null);
+  const adsterraContainerId = `container-${slot}`;
 
   const containerClass = useMemo(() => {
     const base =
@@ -62,9 +64,7 @@ export default function AdSlot({
       return;
     }
 
-    const srcBase = adsterraBaseUrl
-      ? adsterraBaseUrl.replace(/\/$/, "")
-      : `https://${adsterraHost}`;
+    const srcBase = adsterraNativeBaseUrl.replace(/\/$/, "");
     const invokeSrc = `${srcBase}/${slot}/invoke.js`;
 
     window.atOptions = {
@@ -87,7 +87,7 @@ export default function AdSlot({
     return () => {
       root.innerHTML = "";
     };
-  }, [adsterraBaseUrl, adsterraHost, height, provider, slot, width]);
+  }, [adsterraNativeBaseUrl, height, provider, slot, width]);
 
   if (provider === "google" && !googleClient) {
     return (
@@ -116,6 +116,7 @@ export default function AdSlot({
       <div className={containerClass}>
         <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
         <div
+          id={adsterraContainerId}
           ref={adsterraContainerRef}
           className="mx-auto"
           style={{ minHeight: `${height}px`, ...style }}

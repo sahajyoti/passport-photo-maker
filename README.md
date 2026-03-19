@@ -74,12 +74,22 @@ Set in `.env.local`:
 
 ```bash
 NEXT_PUBLIC_AD_PROVIDER=adsterra
-NEXT_PUBLIC_ADSTERRA_HOST=www.highperformanceformat.com
+NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL=https://pl28943141.profitablecpmratenetwork.com
 NEXT_PUBLIC_AD_SLOT_TOP=your_top_slot_key
 NEXT_PUBLIC_AD_SLOT_MID=your_mid_slot_key
 NEXT_PUBLIC_AD_SLOT_SIDEBAR=your_sidebar_slot_key
 NEXT_PUBLIC_AD_SLOT_FOOTER=your_footer_slot_key
 ```
+
+The app now also injects these Adsterra scripts globally when `NEXT_PUBLIC_AD_PROVIDER=adsterra`:
+
+- Popunder: `https://pl28943084.profitablecpmratenetwork.com/37/27/41/3727410cc90fd7952a332e882cab21de.js`
+- Social Bar: `https://pl28943139.profitablecpmratenetwork.com/8f/04/f1/8f04f1d27c03f6d8124ff1c6435104d4.js`
+
+Native Banner slots render with:
+
+- Script: `${NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL}/{slot}/invoke.js`
+- Container id: `container-{slot}`
 
 For Google AdSense instead:
 
