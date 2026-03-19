@@ -193,7 +193,18 @@ async function detectFaceCenterXRatio(image: HTMLImageElement): Promise<number |
 }
 
 async function removeImageBackground(file: File): Promise<Blob> {
-  let apiErrorMessage = "Background removal failed.";
+  let browserErrorMessage = "";
+
+  try {
+    return await removeBackgroundInBrowser(file, {
+      model: "isnet_quint8",
+      output: {
+        format: "image/png",
+      },
+    });
+  } catch (browserError) {
+    browserErrorMessage = browserError instanceof Error ? browserError.message : "Browser engine failed.";
+  }
 
   try {
     const formData = new FormData();
@@ -205,32 +216,25 @@ async function removeImageBackground(file: File): Promise<Blob> {
     });
 
     if (!response.ok) {
+      let apiErrorMessage = "API failed.";
       try {
         const payload = (await response.json()) as { error?: string };
-        throw new Error(payload.error || apiErrorMessage);
-      } catch {
-        throw new Error(apiErrorMessage);
-      }
+        apiErrorMessage = payload.error || apiErrorMessage;
+      } catch {}
+
+      throw new Error(apiErrorMessage);
     }
 
-    return await response.blob();
-  } catch (apiError) {
-    apiErrorMessage = apiError instanceof Error ? apiError.message : apiErrorMessage;
-  }
+    const apiBlob = await response.blob();
+    if (apiBlob.size === 0) {
+      throw new Error("API returned empty image.");
+    }
 
-  try {
-    const inputBlob = new Blob([await file.arrayBuffer()], {
-      type: file.type || "image/jpeg",
-    });
-    return await removeBackgroundInBrowser(inputBlob, {
-      model: "isnet",
-      publicPath: "https://cdn.jsdelivr.net/npm/${PACKAGE_NAME}@${PACKAGE_VERSION}/dist/",
-      output: {
-        format: "image/png",
-      },
-    });
-  } catch {
-    throw new Error(apiErrorMessage);
+    return apiBlob;
+  } catch (apiError) {
+    const apiErrorMessage = apiError instanceof Error ? apiError.message : "API engine failed.";
+    const combined = `Background removal failed. Browser: ${browserErrorMessage || "unknown"}. API: ${apiErrorMessage}`;
+    throw new Error(combined);
   }
 }
 
