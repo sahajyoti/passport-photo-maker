@@ -32,7 +32,7 @@ export default function AdSlot({
   width = 728,
   height = 90,
 }: AdSlotProps) {
-  const provider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
+  const provider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "adsterra").toLowerCase();
   const googleClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
   const adsterraNativeBaseUrl =
     process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||

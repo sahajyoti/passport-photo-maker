@@ -788,7 +788,7 @@ export default function Home() {
           slot={
             process.env.NEXT_PUBLIC_AD_SLOT_TOP ||
             process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP ||
-            "0000000000"
+            "ab0b8aa12878af29140c2a38dc9f12dd"
           }
           label="Top Banner Ad"
           className="mb-6"
@@ -1177,7 +1177,7 @@ export default function Home() {
               slot={
                 process.env.NEXT_PUBLIC_AD_SLOT_MID ||
                 process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_MID ||
-                "0000000001"
+                "ab0b8aa12878af29140c2a38dc9f12dd"
               }
               label="In-Content Ad"
               style={{ minHeight: "120px" }}
@@ -1233,7 +1233,7 @@ export default function Home() {
               slot={
                 process.env.NEXT_PUBLIC_AD_SLOT_SIDEBAR ||
                 process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_SIDEBAR ||
-                "0000000002"
+                "ab0b8aa12878af29140c2a38dc9f12dd"
               }
               label="Sidebar Ad"
               className="mt-4"

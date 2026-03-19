@@ -151,7 +151,7 @@ export default function SiteFooter() {
             slot={
               process.env.NEXT_PUBLIC_AD_SLOT_FOOTER ||
               process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_FOOTER ||
-              "0000000003"
+              "ab0b8aa12878af29140c2a38dc9f12dd"
             }
             label="Footer Ad"
             className="mb-5 border-slate-700 bg-slate-900 text-slate-300"

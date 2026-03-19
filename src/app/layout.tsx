@@ -32,7 +32,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
+  const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "adsterra").toLowerCase();
   const isAdsterra = adProvider === "adsterra";
   const adsenseClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
   const shouldLoadGoogleAdsense = adProvider === "google" && Boolean(adsenseClient);
