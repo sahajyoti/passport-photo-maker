@@ -1,6 +1,7 @@
 "use client";
 
 import { jsPDF } from "jspdf";
+import { removeBackground as removeBackgroundInBrowser } from "@imgly/background-removal";
 import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdSlot from "@/components/ad-slot";
@@ -192,6 +193,8 @@ async function detectFaceCenterXRatio(image: HTMLImageElement): Promise<number |
 }
 
 async function removeImageBackground(file: File): Promise<Blob> {
+  let apiErrorMessage = "Background removal failed.";
+
   try {
     const formData = new FormData();
     formData.append("image", file);
@@ -204,15 +207,30 @@ async function removeImageBackground(file: File): Promise<Blob> {
     if (!response.ok) {
       try {
         const payload = (await response.json()) as { error?: string };
-        throw new Error(payload.error || "Background removal failed.");
+        throw new Error(payload.error || apiErrorMessage);
       } catch {
-        throw new Error("Background removal failed.");
+        throw new Error(apiErrorMessage);
       }
     }
 
     return await response.blob();
-  } catch (error) {
-    throw error instanceof Error ? error : new Error("Background removal failed.");
+  } catch (apiError) {
+    apiErrorMessage = apiError instanceof Error ? apiError.message : apiErrorMessage;
+  }
+
+  try {
+    const inputBlob = new Blob([await file.arrayBuffer()], {
+      type: file.type || "image/jpeg",
+    });
+    return await removeBackgroundInBrowser(inputBlob, {
+      model: "isnet",
+      publicPath: "https://cdn.jsdelivr.net/npm/${PACKAGE_NAME}@${PACKAGE_VERSION}/dist/",
+      output: {
+        format: "image/png",
+      },
+    });
+  } catch {
+    throw new Error(apiErrorMessage);
   }
 }
 
