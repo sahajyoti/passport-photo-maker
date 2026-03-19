@@ -29,14 +29,17 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className="nav-theme-btn"
-      aria-label="Toggle light and dark mode"
-      title="Toggle light and dark mode"
-    >
-      Theme
-    </button>
+    <label className="theme-switch">
+      <input
+        type="checkbox"
+        checked={theme === "dark"}
+        onChange={toggleTheme}
+        aria-label="Toggle light and dark mode"
+      />
+      <span className="theme-slider">
+        <span className="theme-icon theme-icon-light">☀️</span>
+        <span className="theme-icon theme-icon-dark">🌙</span>
+      </span>
+    </label>
   );
 }

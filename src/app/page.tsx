@@ -201,15 +201,19 @@ async function removeImageBackground(file: File): Promise<Blob> {
       body: formData,
     });
 
-    if (response.ok) {
-      return await response.blob();
+    if (!response.ok) {
+      try {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "Background removal failed.");
+      } catch {
+        throw new Error("Background removal failed.");
+      }
     }
-  } catch {
-    // Fallback AI segmentation is handled below.
-  }
 
-  const { removeBackground } = await import("@imgly/background-removal");
-  return await removeBackground(file);
+    return await response.blob();
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Background removal failed.");
+  }
 }
 
 async function buildSinglePhotoCanvas(options: {
@@ -797,7 +801,7 @@ export default function Home() {
           height={90}
         />
 
-        <div className="home-grid grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="home-grid grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="space-y-5">
             <article className="panel">
               <h2 className="step-title">1. Upload Photo</h2>
@@ -849,7 +853,11 @@ export default function Home() {
               <h2 className="step-title">2. Remove Background</h2>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
-                  {isRemovingBg ? "Processing with AI..." : processedPreview ? "Background removed" : "Waiting for upload"}
+                  {isRemovingBg
+                    ? "Processing with AI..."
+                    : processedPreview
+                      ? "Background removed"
+                      : "Waiting for upload"}
                 </span>
                 <button
                   type="button"

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import ThemeToggle from "@/components/theme-toggle";
 
 const LINKS = [
@@ -14,6 +15,7 @@ const LINKS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <header className="site-nav-wrap">
@@ -30,13 +32,34 @@ export default function Navbar() {
           <span>SnapPassport</span>
         </Link>
 
-        <nav className="nav-links" aria-label="Primary">
+        <div className="nav-controls">
+          <ThemeToggle />
+          <button
+            type="button"
+            className="nav-menu-btn"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="primary-mobile-nav"
+            aria-label="Toggle navigation menu"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          >
+            <span className="nav-menu-line" />
+            <span className="nav-menu-line" />
+            <span className="nav-menu-line" />
+          </button>
+        </div>
+
+        <nav
+          id="primary-mobile-nav"
+          className={isMobileMenuOpen ? "nav-links nav-links-open" : "nav-links"}
+          aria-label="Primary"
+        >
           {LINKS.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={isActive ? "nav-link nav-link-active" : "nav-link"}
               >
                 {item.label}
@@ -44,8 +67,6 @@ export default function Navbar() {
             );
           })}
         </nav>
-
-        <ThemeToggle />
       </div>
     </header>
   );

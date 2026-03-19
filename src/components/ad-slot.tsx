@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
 
 type AdSlotProps = {
   slot: string;
@@ -30,9 +30,13 @@ export default function AdSlot({
   const adsterraNativeBaseUrl =
     process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||
     "https://pl28943141.profitablecpmratenetwork.com";
+  const stableId = useId().replace(/[:]/g, "");
   const adsterraRootRef = useRef<HTMLDivElement | null>(null);
-  const adsterraInstanceRef = useRef(`inst-${Math.random().toString(36).slice(2, 10)}`);
-  const adsterraContainerId = `container-${slot}-${adsterraInstanceRef.current}`;
+  const adsterraInstanceId = useMemo(() => `inst-${stableId}`, [stableId]);
+  const adsterraContainerId = useMemo(
+    () => `container-${slot}-${adsterraInstanceId}`,
+    [adsterraInstanceId, slot],
+  );
 
   const containerClass = useMemo(() => {
     const base =
@@ -69,7 +73,7 @@ export default function AdSlot({
     const script = document.createElement("script");
     script.async = true;
     script.setAttribute("data-cfasync", "false");
-    script.src = `${invokeSrc}?v=${adsterraInstanceRef.current}`;
+    script.src = `${invokeSrc}?v=${adsterraInstanceId}`;
     script.onerror = () => {
       // Helps diagnose blocked network/script errors in production browsers.
       console.error("Adsterra invoke script failed to load", { slot, invokeSrc });
@@ -80,7 +84,7 @@ export default function AdSlot({
     return () => {
       root.innerHTML = "";
     };
-  }, [adsterraContainerId, adsterraNativeBaseUrl, provider, slot]);
+  }, [adsterraContainerId, adsterraInstanceId, adsterraNativeBaseUrl, provider, slot]);
 
   if (provider === "google" && !googleClient) {
     return (
@@ -111,7 +115,7 @@ export default function AdSlot({
         <div
           ref={adsterraRootRef}
           className="mx-auto"
-          style={{ minHeight: `${height}px`, ...style }}
+          style={{ minHeight: `${height}px`, width: `${width}px`, maxWidth: "100%", ...style }}
         />
       </div>
     );
@@ -122,7 +126,7 @@ export default function AdSlot({
       <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
       <ins
         className="adsbygoogle block"
-        style={{ display: "block", ...style }}
+        style={{ display: "block", width: "100%", maxWidth: `${width}px`, minHeight: `${height}px`, ...style }}
         data-ad-client={googleClient}
         data-ad-slot={slot}
         data-ad-format="auto"
