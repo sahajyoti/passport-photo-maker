@@ -64,14 +64,18 @@ export default function AdSlot({
 
     const container = document.createElement("div");
     container.id = adsterraContainerId;
+    root.appendChild(container);
 
     const script = document.createElement("script");
     script.async = true;
     script.setAttribute("data-cfasync", "false");
     script.src = `${invokeSrc}?v=${adsterraInstanceRef.current}`;
+    script.onerror = () => {
+      // Helps diagnose blocked network/script errors in production browsers.
+      console.error("Adsterra invoke script failed to load", { slot, invokeSrc });
+    };
 
     root.appendChild(script);
-    root.appendChild(container);
 
     return () => {
       root.innerHTML = "";
