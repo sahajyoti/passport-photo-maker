@@ -20,39 +20,22 @@ export default function Navbar() {
   return (
     <header className="site-nav-wrap">
       <div className="site-nav">
-        <Link href="/" className="brand-mark">
+        <Link href="/" className="brand-mark" onClick={() => setIsMobileMenuOpen(false)}>
           <Image
             src="/logo.png"
             alt="SnapPassport logo"
-            width={62}
-            height={62}
+            width={44}
+            height={44}
             className="brand-logo"
             priority
           />
-          <span>SnapPassport</span>
+          <div className="brand-copy">
+            <span className="brand-title">SnapPassport</span>
+            <span className="brand-subtitle">Passport Photo Maker</span>
+          </div>
         </Link>
 
-        <div className="nav-controls">
-          <ThemeToggle />
-          <button
-            type="button"
-            className="nav-menu-btn"
-            aria-expanded={isMobileMenuOpen}
-            aria-controls="primary-mobile-nav"
-            aria-label="Toggle navigation menu"
-            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-          >
-            <span className="nav-menu-line" />
-            <span className="nav-menu-line" />
-            <span className="nav-menu-line" />
-          </button>
-        </div>
-
-        <nav
-          id="primary-mobile-nav"
-          className={isMobileMenuOpen ? "nav-links nav-links-open" : "nav-links"}
-          aria-label="Primary"
-        >
+        <nav id="primary-mobile-nav" className={isMobileMenuOpen ? "nav-links nav-links-open" : "nav-links"} aria-label="Primary">
           {LINKS.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -67,6 +50,25 @@ export default function Navbar() {
             );
           })}
         </nav>
+
+        <div className="nav-controls">
+          <ThemeToggle />
+          <Link href="/#studio" className="nav-cta" onClick={() => setIsMobileMenuOpen(false)}>
+            Start Now
+          </Link>
+          <button
+            type="button"
+            className="nav-menu-btn"
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="primary-mobile-nav"
+            aria-label="Toggle navigation menu"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          >
+            <span className="nav-menu-line" />
+            <span className="nav-menu-line" />
+            <span className="nav-menu-line" />
+          </button>
+        </div>
       </div>
     </header>
   );

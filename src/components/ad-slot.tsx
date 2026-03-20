@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 type AdSlotProps = {
   slot: string;
@@ -25,22 +25,19 @@ export default function AdSlot({
   width = 728,
   height = 90,
 }: AdSlotProps) {
-  const provider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "adsterra").toLowerCase();
-  const googleClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
+  const provider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
+  const googleClient =
+    process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT || "ca-pub-8168976143164442";
   const adsterraNativeBaseUrl =
     process.env.NEXT_PUBLIC_ADSTERRA_NATIVE_BASE_URL ||
     "https://pl28943141.profitablecpmratenetwork.com";
-  const stableId = useId().replace(/[:]/g, "");
   const adsterraRootRef = useRef<HTMLDivElement | null>(null);
-  const adsterraInstanceId = useMemo(() => `inst-${stableId}`, [stableId]);
-  const adsterraContainerId = useMemo(
-    () => `container-${slot}-${adsterraInstanceId}`,
-    [adsterraInstanceId, slot],
-  );
+  const adsterraInstanceRef = useRef(`inst-${Math.random().toString(36).slice(2, 10)}`);
+  const adsterraContainerId = `container-${slot}-${adsterraInstanceRef.current}`;
 
   const containerClass = useMemo(() => {
     const base =
-      "rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-xs text-slate-500";
+      "rounded-2xl border border-white/10 bg-slate-950/45 p-3 text-center text-xs text-slate-400 backdrop-blur";
     return className ? `${base} ${className}` : base;
   }, [className]);
 
@@ -73,7 +70,7 @@ export default function AdSlot({
     const script = document.createElement("script");
     script.async = true;
     script.setAttribute("data-cfasync", "false");
-    script.src = `${invokeSrc}?v=${adsterraInstanceId}`;
+    script.src = `${invokeSrc}?v=${adsterraInstanceRef.current}`;
     script.onerror = () => {
       // Helps diagnose blocked network/script errors in production browsers.
       console.error("Adsterra invoke script failed to load", { slot, invokeSrc });
@@ -84,13 +81,13 @@ export default function AdSlot({
     return () => {
       root.innerHTML = "";
     };
-  }, [adsterraContainerId, adsterraInstanceId, adsterraNativeBaseUrl, provider, slot]);
+  }, [adsterraContainerId, adsterraNativeBaseUrl, provider, slot]);
 
   if (provider === "google" && !googleClient) {
     return (
       <div className={containerClass}>
-        <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
-        <div className="flex min-h-[110px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white">
+        <p className="mb-2 font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <div className="flex min-h-[110px] items-center justify-center rounded-lg border border-dashed border-white/15 bg-slate-900/55">
           Ad space reserved. Set NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT to enable Google Ads.
         </div>
       </div>
@@ -100,8 +97,8 @@ export default function AdSlot({
   if (provider === "adsterra" && !slot) {
     return (
       <div className={containerClass}>
-        <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
-        <div className="flex min-h-[110px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white">
+        <p className="mb-2 font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <div className="flex min-h-[110px] items-center justify-center rounded-lg border border-dashed border-white/15 bg-slate-900/55">
           Ad space reserved. Set NEXT_PUBLIC_AD_SLOT_* values to enable Adsterra ads.
         </div>
       </div>
@@ -111,11 +108,11 @@ export default function AdSlot({
   if (provider === "adsterra") {
     return (
       <div className={containerClass}>
-        <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
+        <p className="mb-2 font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
         <div
           ref={adsterraRootRef}
           className="mx-auto"
-          style={{ minHeight: `${height}px`, width: `${width}px`, maxWidth: "100%", ...style }}
+          style={{ minHeight: `${height}px`, ...style }}
         />
       </div>
     );
@@ -123,10 +120,10 @@ export default function AdSlot({
 
   return (
     <div className={containerClass}>
-      <p className="mb-2 font-semibold uppercase tracking-wide">{label}</p>
+      <p className="mb-2 font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
       <ins
         className="adsbygoogle block"
-        style={{ display: "block", width: "100%", maxWidth: `${width}px`, minHeight: `${height}px`, ...style }}
+        style={{ display: "block", ...style }}
         data-ad-client={googleClient}
         data-ad-slot={slot}
         data-ad-format="auto"

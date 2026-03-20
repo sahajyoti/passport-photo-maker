@@ -15,7 +15,6 @@ def main() -> int:
     input_img = Image.open(input_path)
     output_img = remove(input_img)
     output_img.save(output_path)
-    print(f"Background removed and saved to {output_path}")
 
     return 0
 

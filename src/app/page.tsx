@@ -435,6 +435,56 @@ export default function Home() {
   const [faceCenterXRatio, setFaceCenterXRatio] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const featureCards = [
+    {
+      title: "AI Background Removal",
+      description: "Studio-grade cutout engine removes messy backgrounds in seconds.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <circle cx="18" cy="17" r="2" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      title: "Face Auto Centering",
+      description: "Subject-aware positioning keeps your face naturally centered for compliance.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <path d="M12 4a5 5 0 0 1 5 5v2a5 5 0 0 1-10 0V9a5 5 0 0 1 5-5Z" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M4.5 20a7.5 7.5 0 0 1 15 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      ),
+    },
+    {
+      title: "Print-ready Layout",
+      description: "Exact spacing and alignment for A4 and 4x6 sheets with live preview.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.7" />
+          <path d="M9 9h6v6H9z" stroke="currentColor" strokeWidth="1.7" />
+        </svg>
+      ),
+    },
+    {
+      title: "High-Quality Export",
+      description: "Download crisp 300 DPI PDF or PNG files for instant printing.",
+      icon: (
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+          <path d="M12 4v10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="m8.5 10.5 3.5 3.5 3.5-3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 19h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        </svg>
+      ),
+    },
+  ];
+
+  const workflowSteps = [
+    "Upload Photo",
+    "Remove Background",
+    "Adjust Size & Layout",
+    "Download",
+  ];
 
   const selectedPhotoSize = useMemo(() => {
     if (sizeMode === "custom") {
@@ -830,41 +880,112 @@ export default function Home() {
     }
   };
 
+  const [sliderPosition, setSliderPosition] = useState(50);
+
+  const previewImage = sheetPreview || processedPreview || sourcePreview;
+
   return (
-    <main className="home-shell min-h-screen px-4 py-8 md:px-8 md:py-10">
-      <section className="mx-auto max-w-7xl">
-        <header className="glow-card home-hero mb-8 rounded-3xl border p-6 backdrop-blur md:p-8">
-          <p className="hero-badge text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">
-            SnapPassport.com
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-            Create beautiful, print-ready passport sheets in one smooth flow.
-          </h1>
-          <p className="mt-3 max-w-3xl text-slate-600">
-            AI background removal, face-aware centering, top-aligned paper layout, border controls, and high-resolution PDF/PNG export.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="workflow-chip">Upload</span>
-            <span className="workflow-chip">Remove Background</span>
-            <span className="workflow-chip">Size & Layout</span>
-            <span className="workflow-chip">Preview & Print</span>
+    <main className="saas-home min-h-screen px-4 pb-16 pt-8 md:px-8 md:pt-10">
+      <section className="mx-auto max-w-7xl space-y-16 md:space-y-20">
+        <header className="hero-shell reveal-up grid gap-8 rounded-[20px] border border-white/10 bg-slate-950/60 p-6 shadow-2xl shadow-cyan-900/20 backdrop-blur xl:grid-cols-[1.05fr_0.95fr] xl:p-10">
+          <div className="space-y-6">
+            <span className="hero-kicker-pill">Passport Photo Studio</span>
+            <h1 className="hero-title max-w-2xl text-5xl font-bold leading-[1.02] tracking-tight text-white md:text-6xl">
+              Generate flawless passport sheets in under a minute.
+            </h1>
+            <p className="max-w-xl text-base leading-relaxed text-slate-300 md:text-lg">
+              SnapPassport combines AI background cleanup, auto-centering, and print-accurate layouts into one polished workflow designed for fast approvals.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a href="#studio" className="cta-primary">
+                Generate Passport Sheet
+              </a>
+              <a href="#workflow" className="cta-secondary">
+                Try Demo
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-3 pt-1 text-sm">
+              <span className="trust-chip">Used by 10,000+ users</span>
+              <span className="trust-chip">4.9/5 average rating</span>
+              <span className="trust-chip">300 DPI export quality</span>
+            </div>
+          </div>
+
+          <div className="hero-preview reveal-up-delayed rounded-[18px] border border-cyan-300/20 bg-slate-900/70 p-4 shadow-xl shadow-cyan-900/20">
+            <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-cyan-200/80">
+              <span>Passport Sheet Preview</span>
+              <span>35 x 45 mm</span>
+            </div>
+            <div className="sheet-mockup rounded-2xl border border-white/10 bg-white p-3">
+              {previewImage ? (
+                <NextImage
+                  src={previewImage}
+                  alt="Passport sheet mockup"
+                  width={900}
+                  height={1200}
+                  unoptimized
+                  className="h-[360px] w-full rounded-xl object-cover"
+                />
+              ) : (
+                <div className="mock-grid h-[360px] rounded-xl">
+                  {Array.from({ length: 9 }).map((_, index) => (
+                    <span key={index} className="mock-photo" />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        <AdSlot
-          slot={
-            process.env.NEXT_PUBLIC_AD_SLOT_TOP ||
-            process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP ||
-            "ab0b8aa12878af29140c2a38dc9f12dd"
-          }
-          label="Top Banner Ad"
-          className="mb-6"
-          style={{ minHeight: "90px" }}
-          width={728}
-          height={90}
-        />
+        <section className="reveal-up space-y-4" aria-label="Features">
+          <div className="space-y-2">
+            <p className="section-label">Core Features</p>
+            <h2 className="section-title">Everything needed for compliant, premium passport photos</h2>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {featureCards.map((feature) => (
+              <article key={feature.title} className="feature-card">
+                <span className="feature-icon">{feature.icon}</span>
+                <h3 className="mt-4 text-lg font-semibold text-white">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{feature.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <div className="home-grid grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
+        <section id="workflow" className="reveal-up space-y-4" aria-label="Workflow">
+          <div className="space-y-2">
+            <p className="section-label">How It Works</p>
+            <h2 className="section-title">Four steps from upload to print-ready download</h2>
+          </div>
+          <div className="workflow-row">
+            {workflowSteps.map((step, index) => (
+              <article key={step} className="workflow-card">
+                <span className="workflow-index">0{index + 1}</span>
+                <h3 className="mt-3 text-base font-semibold text-white">{step}</h3>
+                {index < workflowSteps.length - 1 ? <span className="workflow-arrow" aria-hidden>→</span> : null}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="reveal-up rounded-2xl border border-white/10 bg-slate-950/55 p-4 shadow-lg shadow-slate-900/50 md:p-5">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Sponsored</p>
+          <AdSlot
+            slot={
+              process.env.NEXT_PUBLIC_AD_SLOT_TOP ||
+              process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP ||
+              "ab0b8aa12878af29140c2a38dc9f12dd"
+            }
+            label="Sponsored"
+            className="ad-muted"
+            style={{ minHeight: "90px" }}
+            width={728}
+            height={90}
+          />
+        </section>
+
+        <div id="studio" className="home-grid grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
           <section className="space-y-5">
             <article className="panel">
               <h2 className="step-title">1. Upload Photo</h2>
@@ -882,10 +1003,20 @@ export default function Home() {
                 <p className="text-slate-700">Drag and drop JPG/PNG here, or</p>
                 <button
                   type="button"
-                  className="mt-3 rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600"
+                  className="upload-cta mt-3"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  Browse Files
+                  <svg viewBox="0 0 24 24" aria-hidden className="upload-cta-icon">
+                    <path
+                      d="M12 16V6m0 0-4 4m4-4 4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span>Upload Image</span>
                 </button>
                 <input
                   ref={fileInputRef}
@@ -1250,7 +1381,8 @@ export default function Home() {
                 process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_MID ||
                 "ab0b8aa12878af29140c2a38dc9f12dd"
               }
-              label="In-Content Ad"
+              label="Sponsored"
+              className="ad-muted"
               style={{ minHeight: "120px" }}
               width={728}
               height={120}
@@ -1258,8 +1390,98 @@ export default function Home() {
           </section>
 
           <aside className="panel h-fit lg:sticky lg:top-8">
-            <h2 className="step-title">Live Print Sheet Preview</h2>
+            <h2 className="step-title">Photo Transformation</h2>
             <p className="mt-2 text-sm text-slate-600">
+              Before & After Comparison
+            </p>
+
+            {sourcePreview || processedPreview ? (
+              <div className="before-after-slider mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+                <div className="relative w-full" style={{ paddingBottom: "100%" }}>
+                  {sourcePreview && (
+                    <NextImage
+                      src={sourcePreview}
+                      alt="Original photo"
+                      width={400}
+                      height={400}
+                      unoptimized
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  )}
+                  {processedPreview && (
+                    <div
+                      className="absolute inset-0 h-full w-full overflow-hidden"
+                      style={{ width: `${sliderPosition}%` }}
+                    >
+                      <NextImage
+                        src={processedPreview}
+                        alt="Background removed"
+                        width={400}
+                        height={400}
+                        unoptimized
+                        className="h-full w-full object-cover"
+                        style={{ width: `${(100 / sliderPosition) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    className="slider-handle absolute inset-y-0 w-1 cursor-col-resize bg-white shadow-lg"
+                    style={{ left: `${sliderPosition}%`, transform: "translateX(-50%)" }}
+                    onMouseDown={(e) => {
+                      const slider = e.currentTarget.parentElement;
+                      const startX = e.clientX;
+                      const startPos = sliderPosition;
+
+                      const handleMouseMove = (moveEvent: MouseEvent) => {
+                        if (!slider) return;
+                        const rect = slider.getBoundingClientRect();
+                        const newPos = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+                        setSliderPosition(Math.max(0, Math.min(100, newPos)));
+                      };
+
+                      const handleMouseUp = () => {
+                        document.removeEventListener("mousemove", handleMouseMove);
+                        document.removeEventListener("mouseup", handleMouseUp);
+                      };
+
+                      document.addEventListener("mousemove", handleMouseMove);
+                      document.addEventListener("mouseup", handleMouseUp);
+                    }}
+                  >
+                    <div className="slider-chevron absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white bg-white/90 p-1 text-xs text-slate-700">
+                      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+                        <path d="M8 5v14M16 5v14" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="preview-surface mt-4 flex min-h-[280px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 p-6 text-center text-sm text-slate-500">
+                Upload an image to see before & after transformation.
+              </div>
+            )}
+
+            {sheetPreview && (
+              <div className="mt-6 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Print Sheet Preview</p>
+                <p className="text-xs text-slate-500">
+                  {layoutPlan.photoWidthMm.toFixed(1)} x {layoutPlan.photoHeightMm.toFixed(1)} mm • {effectiveRows} x {FIXED_COLS} grid • {PAGE_PRESETS[pageMode].label}
+                </p>
+                <div className="overflow-hidden rounded-lg border border-slate-200">
+                  <NextImage
+                    src={sheetPreview}
+                    alt="Print sheet preview"
+                    width={600}
+                    height={800}
+                    unoptimized
+                    className="w-full object-contain"
+                  />
+                </div>
+              </div>
+            )}
+
+            <p className="mt-2 text-xs text-slate-500">
               {layoutPlan.photoWidthMm.toFixed(1)} x {layoutPlan.photoHeightMm.toFixed(1)} mm • {effectiveRows} x {FIXED_COLS} grid • {PAGE_PRESETS[pageMode].label}
             </p>
             <p className="mt-1 text-xs text-slate-500">
@@ -1269,23 +1491,6 @@ export default function Home() {
               Layout: {layoutAlign === "top" ? `Top aligned (${topMarginMm} mm margin)` : "Centered"}
               {addBorder ? ` • Border ${borderThicknessMm} mm` : ""}
             </p>
-
-            <div className="preview-surface mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-              {sheetPreview ? (
-                <NextImage
-                  src={sheetPreview}
-                  alt="Print sheet preview"
-                  width={1200}
-                  height={1600}
-                  unoptimized
-                  className="w-full object-contain"
-                />
-              ) : (
-                <div className="flex min-h-[420px] items-center justify-center p-6 text-center text-sm text-slate-500">
-                  Upload an image and complete background removal to see the preview.
-                </div>
-              )}
-            </div>
 
             {(isRemovingBg || isRenderingPreview) && (
               <p className="mt-3 text-sm font-medium text-sky-600">
@@ -1306,8 +1511,8 @@ export default function Home() {
                 process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_SIDEBAR ||
                 "ab0b8aa12878af29140c2a38dc9f12dd"
               }
-              label="Sidebar Ad"
-              className="mt-4"
+              label="Sponsored"
+              className="mt-4 ad-muted"
               style={{ minHeight: "280px" }}
               width={300}
               height={280}

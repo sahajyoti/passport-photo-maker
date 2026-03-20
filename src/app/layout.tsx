@@ -33,12 +33,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "adsterra").toLowerCase();
-  const adsenseClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT;
+  const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
+  const adsenseClient =
+    process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT || "ca-pub-8168976143164442";
   const shouldLoadGoogleAdsense = adProvider === "google" && Boolean(adsenseClient);
 
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className={`${sora.variable} ${geistMono.variable} antialiased`}

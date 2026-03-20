@@ -1,47 +1,114 @@
-import { spawn } from "node:child_process";
-import { promises as fs } from "node:fs";
-import os from "node:os";
-import path from "node:path";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { readFile, rm, writeFile, mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createInterface, type Interface } from "node:readline";
+
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const PYTHON_BIN_CANDIDATES = [
-  process.env.REMBG_PYTHON_BIN,
-  "python3",
-  "python",
-].filter((value): value is string => Boolean(value));
+type PendingTask = {
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
-const SCRIPT_PATH = path.join(process.cwd(), "scripts", "remove_bg.py");
+let worker: ChildProcessWithoutNullStreams | null = null;
+let workerReader: Interface | null = null;
+let pendingTasks: PendingTask[] = [];
+let workerQueue: Promise<void> = Promise.resolve();
+let stderrTail = "";
 
-function runPythonScript(pythonBin: string, inputPath: string, outputPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(pythonBin, [SCRIPT_PATH, inputPath, outputPath], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+function resetWorkerState() {
+  workerReader?.removeAllListeners();
+  workerReader?.close();
+  workerReader = null;
+  worker = null;
 
-    let stderr = "";
+  const error = new Error(stderrTail || "rembg worker stopped unexpectedly");
+  for (const task of pendingTasks) {
+    task.reject(error);
+  }
+  pendingTasks = [];
+}
 
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
+function ensureWorker(pythonBin: string, workerScriptPath: string) {
+  if (worker) {
+    return worker;
+  }
 
-    child.on("error", (error) => {
-      reject(error);
-    });
+  stderrTail = "";
+  worker = spawn(pythonBin, ["-u", workerScriptPath], {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
 
-    child.on("close", (code) => {
-      if (code === 0) {
-        resolve();
+  workerReader = createInterface({ input: worker.stdout });
+  workerReader.on("line", (line) => {
+    const task = pendingTasks.shift();
+    if (!task) {
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(line) as { ok?: boolean; error?: string };
+      if (payload.ok) {
+        task.resolve();
         return;
       }
 
-      reject(new Error(stderr.trim() || `Python process exited with code ${code ?? "unknown"}`));
-    });
+      task.reject(new Error(payload.error || "rembg worker returned an unknown error"));
+    } catch {
+      task.reject(new Error(`Invalid worker response: ${line}`));
+    }
   });
+
+  worker.stderr.on("data", (chunk) => {
+    const text = chunk.toString();
+    stderrTail = `${stderrTail}${text}`.slice(-4000);
+  });
+
+  worker.on("error", () => {
+    resetWorkerState();
+  });
+
+  worker.on("close", () => {
+    resetWorkerState();
+  });
+
+  return worker;
+}
+
+function runRembgWithWorker(
+  pythonBin: string,
+  workerScriptPath: string,
+  inputPath: string,
+  outputPath: string,
+) {
+  const task = workerQueue.then(
+    () =>
+      new Promise<void>((resolve, reject) => {
+        const activeWorker = ensureWorker(pythonBin, workerScriptPath);
+        pendingTasks.push({ resolve, reject });
+
+        const payload = JSON.stringify({ inputPath, outputPath });
+        const written = activeWorker.stdin.write(`${payload}\n`);
+        if (written) {
+          return;
+        }
+
+        activeWorker.stdin.once("drain", () => {
+          // No-op: completion is handled when a stdout line is received.
+        });
+      }),
+  );
+
+  workerQueue = task.catch(() => undefined);
+  return task;
 }
 
 export async function POST(request: Request) {
+  let tempDir = "";
+
   try {
     const formData = await request.formData();
     const image = formData.get("image");
@@ -50,45 +117,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No image uploaded." }, { status: 400 });
     }
 
-    const inputBuffer = Buffer.from(await image.arrayBuffer());
-    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "remove-bg-"));
-    const inputPath = path.join(workDir, "input.png");
-    const outputPath = path.join(workDir, "output.png");
+    const workerScriptPath = join(process.cwd(), "scripts", "remove_bg_worker.py");
+    const pythonBin = process.env.REMBG_PYTHON_BIN || "python3";
 
-    let outputBuffer: Buffer | null = null;
-    let lastError: Error | null = null;
+    tempDir = await mkdtemp(join(tmpdir(), "rembg-"));
+    const inputPath = join(tempDir, image.name || "input.jpg");
+    const outputPath = join(tempDir, "output.png");
 
-    try {
-      await fs.writeFile(inputPath, inputBuffer);
+    const imageBuffer = Buffer.from(await image.arrayBuffer());
+    await writeFile(inputPath, imageBuffer);
 
-      for (const pythonBin of PYTHON_BIN_CANDIDATES) {
-        try {
-          await runPythonScript(pythonBin, inputPath, outputPath);
-          outputBuffer = await fs.readFile(outputPath);
-          lastError = null;
-          break;
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-        }
-      }
-    } finally {
-      await fs.rm(workDir, { recursive: true, force: true });
-    }
+    await runRembgWithWorker(pythonBin, workerScriptPath, inputPath, outputPath);
 
-    if (!outputBuffer) {
-      throw new Error(lastError?.message || "Python background removal failed.");
-    }
+    const outputBuffer = await readFile(outputPath);
 
-    const outputBytes = new Uint8Array(outputBuffer.byteLength);
-    outputBytes.set(outputBuffer);
-    const outputBlob = new Blob([outputBytes], { type: "image/png" });
-
-    return new NextResponse(outputBlob, {
+    return new NextResponse(outputBuffer, {
       status: 200,
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "no-store",
-        "x-remove-bg-engine": "python-rembg",
       },
     });
   } catch (error) {
@@ -97,5 +144,9 @@ export async function POST(request: Request) {
       { error: `Background removal failed: ${message}` },
       { status: 500 },
     );
+  } finally {
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   }
 }
