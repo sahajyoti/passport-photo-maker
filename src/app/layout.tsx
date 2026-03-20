@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   title: "SnapPassport.com",
   description:
     "SnapPassport.com helps you create print-ready passport and visa photo sheets with AI background removal and high-resolution exports.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",
