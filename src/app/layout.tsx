@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Sora } from "next/font/google";
-import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import Navbar from "@/components/navbar";
 import OpeningSplash from "@/components/opening-splash";
@@ -34,26 +33,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const adProvider = (process.env.NEXT_PUBLIC_AD_PROVIDER || "google").toLowerCase();
   const adsenseClient =
     process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT || "ca-pub-8168976143164442";
-  const shouldLoadGoogleAdsense = adProvider === "google" && Boolean(adsenseClient);
+  const shouldLoadGoogleAdsense = Boolean(adsenseClient);
 
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
-      <body
-        suppressHydrationWarning
-        className={`${sora.variable} ${geistMono.variable} antialiased`}
-      >
+      <head>
         {shouldLoadGoogleAdsense ? (
-          <Script
-            id="google-adsense"
+          <script
             async
-            strategy="afterInteractive"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
             crossOrigin="anonymous"
           />
         ) : null}
+      </head>
+      <body
+        suppressHydrationWarning
+        className={`${sora.variable} ${geistMono.variable} antialiased`}
+      >
         <OpeningSplash />
         <Navbar />
         {children}

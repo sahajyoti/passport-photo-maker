@@ -4,7 +4,6 @@ import { jsPDF } from "jspdf";
 import { removeBackground as removeBackgroundInBrowser } from "@imgly/background-removal";
 import NextImage from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import AdSlot from "@/components/ad-slot";
 
 type SizeMode = "passport" | "visa" | "custom";
 type PageMode = "A4" | "4x6";
@@ -934,6 +933,34 @@ export default function Home() {
                 </div>
               )}
             </div>
+            <div className="bg-remove-demo mt-4" aria-hidden>
+              <div className="bg-remove-stage">
+                <span className="bg-compare-sweep" />
+                <div className="bg-compare-item bg-remove-before">
+                  <span className="bg-compare-label">Before</span>
+                  <NextImage
+                    src="/person-demo.jpg"
+                    alt=""
+                    width={160}
+                    height={200}
+                    unoptimized
+                    className="bg-remove-photo"
+                  />
+                </div>
+                <div className="bg-compare-item bg-remove-after">
+                  <span className="bg-compare-label">After</span>
+                  <NextImage
+                    src="/person-demo-cutout.png"
+                    alt=""
+                    width={160}
+                    height={200}
+                    unoptimized
+                    className="bg-remove-photo bg-remove-photo-cutout"
+                  />
+                </div>
+              </div>
+              <p className="bg-remove-caption">AI background removal in motion</p>
+            </div>
           </div>
         </header>
 
@@ -967,22 +994,6 @@ export default function Home() {
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="reveal-up rounded-2xl border border-white/10 bg-slate-950/55 p-4 shadow-lg shadow-slate-900/50 md:p-5">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Sponsored</p>
-          <AdSlot
-            slot={
-              process.env.NEXT_PUBLIC_AD_SLOT_TOP ||
-              process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP ||
-              "ab0b8aa12878af29140c2a38dc9f12dd"
-            }
-            label="Sponsored"
-            className="ad-muted"
-            style={{ minHeight: "90px" }}
-            width={728}
-            height={90}
-          />
         </section>
 
         <div id="studio" className="home-grid grid gap-6 grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
@@ -1375,18 +1386,6 @@ export default function Home() {
               </p>
             </article>
 
-            <AdSlot
-              slot={
-                process.env.NEXT_PUBLIC_AD_SLOT_MID ||
-                process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_MID ||
-                "ab0b8aa12878af29140c2a38dc9f12dd"
-              }
-              label="Sponsored"
-              className="ad-muted"
-              style={{ minHeight: "120px" }}
-              width={728}
-              height={120}
-            />
           </section>
 
           <aside className="panel h-fit lg:sticky lg:top-8">
@@ -1429,8 +1428,6 @@ export default function Home() {
                     style={{ left: `${sliderPosition}%`, transform: "translateX(-50%)" }}
                     onMouseDown={(e) => {
                       const slider = e.currentTarget.parentElement;
-                      const startX = e.clientX;
-                      const startPos = sliderPosition;
 
                       const handleMouseMove = (moveEvent: MouseEvent) => {
                         if (!slider) return;
@@ -1505,18 +1502,6 @@ export default function Home() {
               </p>
             ) : null}
 
-            <AdSlot
-              slot={
-                process.env.NEXT_PUBLIC_AD_SLOT_SIDEBAR ||
-                process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_SLOT_SIDEBAR ||
-                "ab0b8aa12878af29140c2a38dc9f12dd"
-              }
-              label="Sponsored"
-              className="mt-4 ad-muted"
-              style={{ minHeight: "280px" }}
-              width={300}
-              height={280}
-            />
           </aside>
         </div>
       </section>

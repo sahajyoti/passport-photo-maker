@@ -9,24 +9,22 @@ function applyTheme(theme: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") {
+      return "light";
+    }
 
-  useEffect(() => {
     // Force a white default once for existing users who may have stale dark preference.
     const resetFlag = localStorage.getItem("theme-default-reset-v1");
     if (!resetFlag) {
       localStorage.setItem("theme", "light");
       localStorage.setItem("theme-default-reset-v1", "done");
-      setTheme("light");
-      applyTheme("light");
-      return;
+      return "light";
     }
 
     const stored = localStorage.getItem("theme");
-    const resolvedTheme: Theme = stored === "dark" || stored === "light" ? stored : "light";
-    setTheme(resolvedTheme);
-    applyTheme(resolvedTheme);
-  }, []);
+    return stored === "dark" || stored === "light" ? stored : "light";
+  });
 
   useEffect(() => {
     applyTheme(theme);
